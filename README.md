@@ -10,9 +10,11 @@ La actividad ha sido realizada de manera individual por **Cristhyan Leonardo Nar
 
 ## Ficheros 
 
-* Empleo_2020-04-05_.csv : Dataset crudo tomado el 5 de abril con todas las ofertas para la ciudad de Cartagena
-* PRA1 - Criathyan Naranjo.R :  Codigo del programa
-* Prac1 - Cristhyan Naranjo.pdf : Archivo con la descripcion del ejercicio
+* 75.584-PEC-header.html : Encabezado del documento
+* Trivago_2020-17_pro.csv : dataset procesado
+* des.csv : archivo con la descripcion de las variables
+* pra2-h.Rmd : Scrip con el programa
+* pra2-h.html : Documento
 
 ## Descripcion
 
