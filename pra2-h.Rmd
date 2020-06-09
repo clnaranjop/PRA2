@@ -1,0 +1,449 @@
+
+---
+title: 'Tipología y ciclo de vida de los datos aula 2: PR2'
+author: "Autor: Cristhyan Naranjo"
+date: "Junio 2019"
+output:
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+    includes:
+      in_header: 75.584-PEC-header.html
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+  word_document: default
+---
+
+******
+
+******
+
+
+
+
+# Detalles de la actividad
+
+
+
+## Descripción
+
+En esta práctica se elabora un caso práctico orientado a aprender a identificar los datos relevantes para un proyecto analítico y usar las herramientas de integración, limpieza, validación y análisis de las mismas.
+
+## Objetivos
+
+* Aprender a aplicar los conocimientos adquiridos y su capacidad de resolución de problemas en entornos nuevos o poco conocidos dentro de contextos más amplios o multidisciplinarios.
+* Saber identificar los datos relevantes y los tratamientos necesarios (integración, limpieza y validación) para llevar a cabo un proyecto analítico.
+* Aprender a analizar los datos adecuadamente para abordar la información contenida en los datos.
+* Identificar la mejor representación de los resultados para aportar conclusiones sobre el problema planteado en el proceso analítico.
+* Actuar con los principios éticos y legales relacionados con la manipulación de datos en función del ámbito de aplicación.
+* Desarrollar las habilidades de aprendizaje que les permitan continuar estudiando de un modo que tendrá que ser en gran medida auto dirigido o autónomo.
+* Desarrollar la capacidad de búsqueda, gestión y uso de información y recursos en el ámbito de la ciencia de datos.
+
+## Competencias
+* Capacidad de analizar un problema en el nivel de abstracción adecuado a cada situación y aplicar las habilidades y conocimientos adquiridos para abordarlo y resolverlo.
+
+* Capacidad para aplicar las técnicas específicas de tratamiento de datos (integración, transformación, limpieza y validación) para su posterior análisis.
+# Resolución
+
+# Descripción del dataset
+
+Este dataset proviene de un web scrapping realizado el día 17 de abril del 2020 en la pagina "Trivago.com" a partir de un código propio y usando una lista de nombres de varios hoteles de Colombia (previamente ajustados para ser reconocidos por la pagina) y usando como parámetro la misma cantidad de días de estadía en las mismas fechas.
+
+Las variables obtenidas fueron las siguientes:
+
+```{r,eval=TRUE,echo=TRUE}
+des<-read.csv2("D:/Dane/trabajo hoteles/14-03/des.csv")
+knitr::kable(data.frame(Nombres=as.vector(des$Nombre),Descripcion=as.vector(des$Descripcion)))
+```
+
+
+## Importancia y objetivos de los análisis
+
+Se pretende identificar que servicios opcionales afectan en mayor medida el precio por habitación ofrecida por un hotel, lo cual puede ser una buena guía para que los negocios hoteleros mejoren sus servicio y sean mas competitivos, o también como base para saber que hoteles tienen mejor relación costo-servicio. 
+
+# Limpieza de los datos
+
+Usaremos las siguientes librerías
+
+```{r,eval=TRUE,echo=TRUE}
+library(knitr)
+library(naniar)
+library(dplyr)
+library(VIM)
+library(lattice)
+library(plotrix)
+library(vioplot)
+library(factoextra)
+library(leaflet)
+```
+
+
+Se utilizara el siguiente data set
+```{r,eval=TRUE,echo=TRUE}
+data<-read.csv2("D:/Dane/trabajo hoteles/14-03/muestras/Trivago_2020-04-17_.csv")
+data1<-data
+attach(data)
+head(data,1)
+```
+
+
+Empezaremos revisando cuantos registros, y cuantas columna tiene el dataset.
+
+```{r,eval=TRUE,echo=TRUE}
+nrow(data)
+ncol(data)
+```
+
+Tenemos 138 filas con 23 columnas, ahora revisemos las clases de las variables
+
+```{r,eval=TRUE,echo=TRUE}
+des<-read.csv2("D:/Dane/trabajo hoteles/14-03/des.csv")
+clase <- sapply(data,class)
+kable(data.frame(variables=names(clase),clase=as.vector(clase),Descripcion=des$Descripcion))
+```
+
+
+## Selección de los datos de interés
+
+Se retiraran las variables: Código,link,Bloque1,Bloque2 porque no ofrecen información de interés para el análisis.
+
+También la variable X porque es redundante y puede afectar al momento de buscar registros duplicados.
+
+```{r,eval=TRUE,echo=TRUE}
+data<-data%>%select(-c(X,Codigo,link,Bloque.1,Bloque.2))
+```
+
+
+## Ceros y elementos vacíos
+
+Revisamos las columnas buscando datos faltantes
+
+```{r,eval=TRUE,echo=TRUE}
+colSums(is.na(data))
+```
+
+```{r,eval=TRUE,echo=TRUE}
+colSums(data=="NULL")
+```
+
+Vemos que el dataset tiene muchos valores faltantes, pero como conocemos el proceso con el que se produjo el dataset, sabemos por ejmplo que si falta la variable "nombre buscado" implica que el programa no pudo conseguir la demás información, por lo que podemos eliminar con confianza los registros con valores faltantes en esta variable.
+Para los valores faltantes de la variable "Precio.mb" es posible realizar una imputación siempre y cuando se tengan suficientes variables adicionales, así que borramos los registros donde las variables "Precio.mb" y "Wifi.lobby" sean nulas  (ya que si falta wifi.lobby implica que faltan las demás variables de ese grupo) que corresponden a los registros con datos insuficientes.
+
+```{r,eval=TRUE,echo=TRUE}
+data<-data[!is.na(data$Nombre.buscado),]
+data<-data[data$Precio!="NULL" & data$Wifi.lobby!="NULL",]
+colSums(is.na(data))
+colSums(data=="NULL")
+```
+
+Ahora tenemos que la mayor cantidad de valores faltantes está en la variable "Estrellas", pero esta variable puede ser aproximada por que tenemos información que pueden servir para clasificar los hoteles, pero primero trataremos las demás variables.
+
+Revisamos el registro que tiene valores faltantes para la variable "piscina"
+
+```{r,eval=TRUE,echo=TRUE}
+data[which(data$Piscina=="NULL"),]
+```
+
+Vemos que este mismo registro presenta valores en varias otras variables, por lo que lo eliminamos
+
+```{r,eval=TRUE,echo=TRUE}
+data<-data[data$Piscina!="NULL",]
+```
+Al revisar la base encontramos algunas valores anómalos como por ejemplo
+```{r,eval=TRUE,echo=TRUE}
+data$Puntaje[177]
+data$Opinion.cualitativa[28]
+```
+Para tratarlos primero eliminaremos estos valores y después los imputaremos
+
+```{r,eval=TRUE,echo=TRUE}
+# Estrellas
+data$Estrellas[data$Estrellas=="NULL"]<-NA
+suppressWarnings(data$Estrellas<-kNN(data)$Estrellas)
+# Opinion cualitativa
+data$Opinion.cualitativa[data$Opinion.cualitativa=="Puntuación no disponible"]<-NA
+data$Opinion.cualitativa[data$Opinion.cualitativa=="("]<-NA
+suppressWarnings(data$Opinion.cualitativa<-kNN(data)$Opinion.cualitativa)
+# Puntaje
+data$Puntaje<-as.numeric(data$Puntaje)
+suppressWarnings(data$Puntaje<-kNN(data)$Puntaje)
+```
+
+Antes de imputar el precio modificaremos esta variable para que sea manejada como numérica
+
+```{r,eval=TRUE,echo=TRUE}
+data$Precio.mb<-gsub("[.]","",data$Precio.mb)
+data$Precio.mb<-gsub("[^0-9]","",data$Precio.mb)
+data$Precio.mb<-as.numeric(data$Precio.mb)
+suppressWarnings(data$Precio.mb<-kNN(data)$Precio.mb)
+
+colSums(is.na(data))
+colSums(data=="NULL")
+nrow(data)
+```
+
+Por fin logramos un dataset adecuado con 320 registros, guardamos este dataset procesado.
+
+```{r,eval=TRUE,echo=TRUE}
+write.csv2(data,"Trivago_2020-04-17_pro.csv")
+```
+
+
+## Valores extremos 
+
+Analizamos la variable precio
+
+```{r,eval=TRUE,echo=TRUE}
+boxplot(data$Precio.mb)$out
+```
+
+Vemos que esta variable presenta demasiados valores extremos, esto puede ser causado a que en la muestra tenemos hoteles de todos os tipos, para corregir esto podemos crear subconjuntos homogéneos a partir de estratos  usando para esto las estrellas.
+
+```{r,eval=TRUE,echo=TRUE}
+hist(as.numeric(data$Estrellas))
+```
+
+A partir de la información del histograma, el resto del análisis solo usaremos hoteles de 4 estrellas porque  son los mas populares
+```{r,eval=TRUE,echo=TRUE}
+data<-data[data$Estrellas==4,]
+```
+
+Volvemos a analizar esta variable 
+
+```{r,eval=TRUE,echo=TRUE}
+hi<-boxplot(data$Precio.mb)$out
+```
+
+
+Aun tenemos valores extremos que vamos a conservar ya que sabemos que no provienen de errores y nos  pueden dar indicios de los hoteles en los que mas cuesta una habitacion y la razón de este precio.
+
+
+
+## Cambio de formato
+
+Cambiamos los niveles de las variables categóricas que corresponden a servicios adicionales para facilitar su análisis 
+
+```{r,eval=TRUE,echo=TRUE}
+data$Wifi.lobby<-as.factor(data$Wifi.lobby)
+data$Wifi.lobby<-as.numeric(data$Wifi.lobby)
+
+data$Wifi.habitacion<-as.factor(data$Wifi.habitacion)
+data$Wifi.habitacion<-as.numeric(data$Wifi.habitacion)
+
+data$Piscina<-as.factor(data$Piscina)
+data$Piscina<-as.numeric(data$Piscina)
+
+data$Spa<-as.factor(data$Spa)
+data$Spa<-as.numeric(data$Spa)
+
+data$Spa<-as.factor(data$Spa)
+data$Spa<-as.numeric(data$Spa)
+
+data$Gimnasio<-as.factor(data$Gimnasio)
+data$Gimnasio<-as.numeric(data$Gimnasio)
+
+data$Parqueadero<-as.factor(data$Parqueadero)
+data$Parqueadero<-as.numeric(data$Parqueadero)
+
+data$Mascotas<-as.factor(data$Mascotas)
+data$Mascotas<-as.numeric(data$Mascotas)
+
+data$Aire.acondicionado<-as.factor(data$Aire.acondicionado)
+data$Aire.acondicionado<-as.numeric(data$Aire.acondicionado)
+
+data$Bar<-as.factor(data$Bar)
+data$Bar<-as.numeric(data$Bar)
+
+data$Restaurante<-as.factor(data$Restaurante)
+data$Restaurante<-as.numeric(data$Restaurante)
+
+data$Opinion.cualitativa<-as.factor(data$Opinion.cualitativa)
+data$Opinion.cualitativa<-as.numeric(data$Opinion.cualitativa)
+
+data$Estrellas<-as.numeric(data$Estrellas)
+
+head(data,n=1)
+```
+
+# Estudio estadístico
+
+Empezamos realizando la matriz de correlación
+
+```{r,eval=TRUE,echo=TRUE}
+mu<-cbind(data$Precio.mb,data$Wifi.habitacion,data$Wifi.lobby,data$Piscina,data$Parqueadero,data$Spa,data$Mascotas,data$Aire.acondicionado,data$Restaurante,data$Bar,data$Gimnasio,data$Puntaje)
+dd<-cor(mu)
+dd
+
+ddd<-as.dist(dd)
+fviz_dist(ddd)
+```
+
+Tanto en la matriz como en la gráfica vemos que en general el nivel de correlación entre las variables es muy bajo, la única significativa ocurre entre "wifi en el lobby" y "wifi en el cuarto", lo que por el contesto tiene bastante lógica.
+Esto puede ser motivo de preocupación porque puede afectar los demás análisis 
+
+## Contraste de hipótesis
+
+Nos plantemos la siguiente pregunta:
+
+¿La habitacion en un hotel con piscina es mas costosa?
+
+Para esto dividiremos el dataset en dos conjuntos, uno con piscina y el otro sin este servicio
+
+```{r,eval=TRUE,echo=TRUE}
+dat1<-data[data$Piscina==1,]  # No tiene piscina
+dat2<-data[data$Piscina==2,]  # Si tiene piscina
+table(dat1$piscina)
+table(dat1$piscina)
+```
+
+Como la cantidad de ambas muestras es superior a 30, por el teorema del limite central podemos suponer que tienen distribución normal. Nuestras hipótesis son
+
+$$H_0: \mu_1-\mu_2 =0$$
+
+$$H_1: \mu_1-\mu_2 <0$$
+
+Donde $\mu_1$ es la media de la población de la que se extrae la primera muestra y $\mu_2$ es la media
+de la población de la que extrae la segunda. Así, tomando $\alpha = 0, 05$ obtenemos.
+
+
+```{r,eval=TRUE,echo=TRUE}
+t.test(dat1$Precio.mb, dat2$Precio.mb,alternative = "less")
+```
+
+Como se obtuvo un p_valor inferior al valor de significacion fijado, rechazamos la hipótesis nula, es decir un cuarto de hotel es mas costos si en el hotel hay piscina, cosa que va de acuerdo con lo esperado.
+
+## Regresión lineal
+
+Si bien vimos que no existe una fuerte correlación en las variables, como practica haremos una regresión lineal para contrastar el precio entre un hotel que presta todos los servicios y uno sin ninguno.
+Creamos tres modelos, el primero solo con los servicios adicionales, al segundo se le agrego el puntaje y al tercero la opinión cualitativa  
+
+```{r,eval=TRUE,echo=TRUE}
+modelo1 <- lm(Precio.mb ~ Wifi.habitacion+Wifi.lobby+Piscina+Parqueadero+Spa+Mascotas+Aire.acondicionado+Restaurante+Bar+Gimnasio, data = data)
+modelo2<- lm(Precio.mb ~ Wifi.habitacion+Wifi.lobby+Piscina+Parqueadero+Spa+Mascotas+Aire.acondicionado+Restaurante+Bar+Gimnasio+Puntaje, data = data)
+modelo3<- lm(Precio.mb ~ Wifi.habitacion+Wifi.lobby+Piscina+Parqueadero+Spa+Mascotas+Aire.acondicionado+Restaurante+Bar+Gimnasio+Puntaje+Opinion.cualitativa, data = data)
+```
+
+Realizamos la table con los coeficientes de determinación para elegir el modelo con mejor ajuste
+```{r,eval=TRUE,echo=TRUE}
+tabla.coeficientes <- matrix(c(1, summary(modelo1)$r.squared,
+                               2, summary(modelo2)$r.squared,
+                               3, summary(modelo3)$r.squared),
+                             ncol = 2, byrow = TRUE)
+tabla.coeficientes
+```
+
+Como se esperaba, ningún modelo tiene un ajuste suficientemente alto, aun así para probar tomaremos el modelo 3
+
+
+```{r,eval=TRUE,echo=TRUE}
+
+# Sin ningun servicio
+pru1 <- data.frame(
+  Wifi.habitacion=1
+  ,Wifi.lobby=1
+  ,Piscina=1
+  ,Parqueadero=1
+  ,Spa=1
+  ,Mascotas=1
+  ,Aire.acondicionado=1
+  ,Restaurante=1
+  ,Bar=1
+  ,Gimnasio=1
+  ,Puntaje=8.0
+  ,Opinion.cualitativa=2
+)
+
+# Con todos los servicios
+
+pru2 <- data.frame(
+  Wifi.habitacion=2
+  ,Wifi.lobby=2
+  ,Piscina=2
+  ,Parqueadero=2
+  ,Spa=2
+  ,Mascotas=2
+  ,Aire.acondicionado=2
+  ,Restaurante=2
+  ,Bar=2
+  ,Gimnasio=2
+  ,Puntaje=8.0
+  ,Opinion.cualitativa=2
+)
+```
+
+
+```{r,eval=TRUE,echo=TRUE}
+# Predecir el precio
+predict(modelo3, pru1)
+```
+
+```{r,eval=TRUE,echo=TRUE}
+predict(modelo3, pru2)
+```
+
+Según este modelo la diferencia de precios es de casi el doble, lo cual no esta alejado de la realidad.
+
+
+## Geocodificacion
+
+Podemos aprovechar que disponemos de las coordenadas de los hoteles para poder visualizar sus ubicaciones.
+El primer mapa señala a cada hotel exactamente en su locación real, este nos permite por ejemplo ver que hay uno que se encuentra en mar abierto (al norte de la península de la guajira), lo que implica un error en los datos  
+
+```{r,eval=TRUE,echo=TRUE}
+
+data$Longitud<-as.numeric(data$Longitud)
+data$Latitud<-as.numeric(data$Latitud)
+
+
+m<-leaflet(data = data[1:nrow(data),])  %>% addProviderTiles(providers$OpenStreetMap) %>% 
+  addMarkers(~Longitud, ~Latitud, popup = ~as.character(Hotel.mb))
+m
+```
+
+El segundo crea unos clusters que los asocia por su proximidad, y desagrega los hoteles según el zoom que se aplica. 
+podemos ver que los hoteles se ubican principalmente en el centro (cerca a la capital), al norte (centrado en la ciudad turística de Cartagena) y hacia al nort-occidente sobre la isla de San andes.
+Esta información puede ser útil para clasificar los hotel por locación y quisas esta variable sea el factor decisivo que modifique el precio de la habitacion ya que la influencia de los servicios que estudiamos no fue significativa
+```{r,eval=TRUE,echo=TRUE}
+
+m<-leaflet(data = data[1:nrow(data),])  %>% addProviderTiles(providers$OpenStreetMap) %>% 
+  addMarkers(~Longitud, ~Latitud, popup = ~as.character(Hotel.mb),clusterOptions = markerClusterOptions())
+m 
+```
+
+
+Este es el mapa con los hoteles del dataset inicial
+
+```{r,eval=TRUE,echo=TRUE}
+
+data1$Longitud<-as.numeric(data1$Longitud)
+data1$Latitud<-as.numeric(data1$Latitud)
+
+m<-leaflet(data = data1[1:nrow(data1),])  %>% addProviderTiles(providers$OpenStreetMap) %>% 
+  addMarkers(~Longitud, ~Latitud, popup = ~as.character(Hotel.mb),clusterOptions = markerClusterOptions())
+m 
+```
+
+
+
+# Conclusión
+
+Si revisamos los hoteles con los precios mas alto dentro de nuestro grupo de estudio (4 estrellas) tenemos
+
+```{r,eval=TRUE,echo=TRUE}
+
+data[62,]
+data[61,]
+```
+
+Vemos que no necesariamente prestan todos los servicios,es mas, el segundo ni siquiera tiene wifi en la habitacion cosa que actualmente es un servicio casi obligatorio.
+Así que con base en los resultados del análisis podemos decir que las variables contenidas en el dataset no afectan de manera significativa al precio, y que existen otros factores que influyen de forma mas contundente (por ejemplo en el caso del segundo hotel sabemos que tiene habitaciones ubicadas bajo el nivel del mar).
+Así que en una investigación futura se podría obtener por centrar la investigación en variables como la marca del hotel, cantidad de habitaciones, cercanía al mar o la ciudad donde se encuentra. 
+
+
+
+
+

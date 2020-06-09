@@ -1,0 +1,26 @@
+Nombre;Descripcion
+X;Identificador
+Nombre.buscado;Nombre que se uso en la busqueda
+Nombre.trivago;Nombre que devolvio trivago
+Codigo;Codigo interno del hotel
+Precio.mb;Precio mas bajo encontrado
+Hotel.mb;Hotel con el precio mas bajo
+Link;Link con la direccion de la publicacion
+Bloque.1;Bloque con informacion general
+Bloque.2;Bloque con informacion general
+Wifi.lobby;Si el hotel tiene wifi en el lobby
+Wifi.habitacion;Si el hotel tiene wifi en la habitacion
+Piscina;Si el hotel tiene wifi en la piscina
+Spa;Si el hotel tiene spa
+Parqueadero;Si el hotel tiene parqueadero
+Mascota;Si el hotel tiene mascota
+Aire.acondicionado;Si el hotel tiene aire acondicionado
+Restaurante;Si el hotel tiene restaurante
+Bar;Si el hotel tiene bar
+Gimnasio;Si el hotel tiene gimnasio
+Estrellas;Nivel de estrellas del hotel
+Puntaje;Puntaje dado por los usuarios
+Opinion.cualitativa;Opinion de los usuarios en un parrafo
+Cantidad.opiniones;Cantidad de opiniones
+Latitud;Latitud de la ubicación del hotel
+Longitud;Longitud de la ubicación del hotel
