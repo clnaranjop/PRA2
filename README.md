@@ -11,6 +11,7 @@ La actividad ha sido realizada de manera individual por **Cristhyan Leonardo Nar
 ## Ficheros 
 
 * 75.584-PEC-header.html : Encabezado del documento
+* Trivago_2020-17_.csv : dataset original
 * Trivago_2020-17_pro.csv : dataset procesado
 * des.csv : archivo con la descripcion de las variables
 * pra2-h.Rmd : Scrip con el programa
